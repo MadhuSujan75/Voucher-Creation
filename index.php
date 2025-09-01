@@ -1,6 +1,5 @@
 <?php
-// index.php
-
-// Redirect to login.php
-header("Location: login.php");
-exit;
+// Redirect to categories page as the main entry point
+header("Location: categories.php");
+exit();
+?>
