@@ -6,6 +6,11 @@ $success = '';
 // Fetch categories for checkbox list
 $categories = $pdo->query("SELECT category_id, name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 
+// Check for success after redirect
+if (isset($_GET['success']) && $_GET['success'] == 1) {
+    $success = "Voucher created successfully!";
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title']);
     $discount_type = $_POST['discount_type'];
@@ -20,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $created_by = 1; // example admin/manager id
 
     // Voucher applicability
-    $applicability = $_POST['applicability'] ?? []; // array of 'ALL', 'category_X', 'event_X_Y'
+    $applicability = $_POST['applicability'] ?? [];
 
     // Voucher code options
     $code_quantity = (int)($_POST['code_quantity'] ?: 0);
@@ -34,6 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($discount_type === 'FIXED' && !$amount_off) $errors[] = "Amount Off required.";
     if ($code_quantity < 1) $errors[] = "Code quantity must be at least 1.";
     if ($code_length < 4) $errors[] = "Code length must be at least 4.";
+
+    // Optional: check if voucher with same title exists
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM vouchers WHERE title = ?");
+    $stmt->execute([$title]);
+    if ($stmt->fetchColumn() > 0) $errors[] = "A voucher with this title already exists.";
 
     if (!$errors) {
         try {
@@ -101,6 +111,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
