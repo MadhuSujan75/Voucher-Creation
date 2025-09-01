@@ -549,14 +549,7 @@ try {
                         <span class="info-label">End Date</span>
                         <span class="info-value"><?= date('M j, Y g:i A', strtotime($voucher['end_at'])) ?></span>
                     </div>
-                    <div class="info-row">
-                        <span class="info-label">Total Usage Limit</span>
-                        <span class="info-value"><?= $voucher['usage_limit_total'] ?: 'Unlimited' ?></span>
-                    </div>
-                    <div class="info-row">
-                        <span class="info-label">Per User Limit</span>
-                        <span class="info-value"><?= $voucher['usage_limit_per_user'] ?></span>
-                    </div>
+
                     <div class="info-row">
                         <span class="info-label">Created</span>
                         <span class="info-value"><?= date('M j, Y g:i A', strtotime($voucher['created_at'])) ?></span>

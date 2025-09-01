@@ -407,7 +407,7 @@ $vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                     <div class="actions">
                                         <a href="voucher_view.php?id=<?= $v['id'] ?>" class="action-btn view">View</a>
                                         <a href="voucher_edit.php?id=<?= $v['id'] ?>" class="action-btn edit">Edit</a>
-                                        <a href="voucher_batch_create.php?voucher_id=<?= $v['id'] ?>" class="action-btn batch">Generate Batch</a>
+                                        <a href="voucher_batch_create.php?voucher_id=<?= $v['id'] ?>" class="action-btn batch">Analytics</a>
                                     </div>
                                 </td>
                             </tr>

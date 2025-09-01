@@ -633,24 +633,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Right Column -->
                 <div class="form-column">
-                    <h2 class="section-title">Code Generation</h2>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="code_quantity">Number of Codes</label>
-                            <input type="number" name="code_quantity" id="code_quantity" required min="1" placeholder="e.g., 100" value="<?= $voucher['requested_quantity'] ?>">
-                        </div>
-                        <div class="form-group">
-                            <label for="code_length">Code Length</label>
-                            <input type="number" name="code_length" id="code_length" value="<?= $voucher['code_length'] ?>" min="4" max="20">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="code_prefix">Code Prefix (Optional)</label>
-                        <input type="text" name="code_prefix" id="code_prefix" placeholder="e.g., SAVE2024" value="<?= htmlspecialchars($voucher['code_prefix']) ?>">
-                    </div>
-
                     <h2 class="section-title">Voucher Applicability</h2>
 
                     <div class="form-group">
@@ -688,6 +670,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 
     <script>
+        // Pass existing applicability data to JavaScript
+        const existingApplicability = <?= json_encode($existing_applicability) ?>;
+        
         // Discount toggle
         const discountSelect = document.getElementById('discount_type');
         const percentGroup = document.getElementById('percent_group');
@@ -743,11 +728,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     
                     // Add individual events
                     data.events.forEach(ev => {
+                        // Only check if this specific event is explicitly selected in the database
+                        const isEventSelected = existingApplicability.some(app => 
+                            app.scope === 'EVENT' && app.category_id == catId && app.event_id == ev.id
+                        );
+                        
                         const eventDiv = document.createElement('div');
                         eventDiv.className = 'checkbox-item';
                         eventDiv.innerHTML = `
                             <label>
-                                <input type="checkbox" class="event_checkbox" name="applicability[]" value="event_${catId}_${ev.id}">
+                                <input type="checkbox" class="event_checkbox" name="applicability[]" value="event_${catId}_${ev.id}" ${isEventSelected ? 'checked' : ''}>
                                 ${ev.name}
                             </label>
                         `;
@@ -799,6 +789,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             updateGlobalAllCheckbox();
                         });
                     });
+                    
+                    // Update "All Events" checkbox state after loading
+                    const eventCheckboxes = container.querySelectorAll('.event_checkbox');
+                    const checkedEvents = container.querySelectorAll('.event_checkbox:checked');
+                    const allEventsCb = container.querySelector('.all_events_cb');
+                    
+                    if (allEventsCb && eventCheckboxes.length > 0) {
+                        if (checkedEvents.length === 0) {
+                            allEventsCb.checked = false;
+                            allEventsCb.indeterminate = false;
+                        } else if (checkedEvents.length === eventCheckboxes.length) {
+                            allEventsCb.checked = true;
+                            allEventsCb.indeterminate = false;
+                        } else {
+                            allEventsCb.checked = false;
+                            allEventsCb.indeterminate = true;
+                        }
+                    }
                 })
                 .catch(err => {
                     console.error('Error fetching events:', err);
