@@ -3,8 +3,37 @@ require 'db.php';
 $errors = [];
 $success = '';
 
+// Get voucher ID from URL
+$voucher_id = $_GET['id'] ?? null;
+
+if (!$voucher_id || !is_numeric($voucher_id)) {
+    header("Location: vouchers_list.php?error=invalid_voucher");
+    exit();
+}
+
 // Fetch categories for checkbox list
 $categories = $pdo->query("SELECT category_id, name FROM categories ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+
+// Fetch existing voucher data
+try {
+    $stmt = $pdo->prepare("SELECT * FROM vouchers WHERE id = ?");
+    $stmt->execute([$voucher_id]);
+    $voucher = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$voucher) {
+        header("Location: vouchers_list.php?error=voucher_not_found");
+        exit();
+    }
+
+    // Fetch existing voucher applicability
+    $stmt = $pdo->prepare("SELECT * FROM voucher_applicability WHERE voucher_id = ?");
+    $stmt->execute([$voucher_id]);
+    $existing_applicability = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (Exception $e) {
+    header("Location: vouchers_list.php?error=database_error");
+    exit();
+}
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $title = trim($_POST['title']);
@@ -17,33 +46,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     $start_at = $_POST['start_at'];
     $end_at = $_POST['end_at'];
-    $created_by = 1; // example admin/manager id
+    $status = $_POST['status'] ?? 'ACTIVE';
 
     // Voucher applicability
     $applicability = $_POST['applicability'] ?? []; // array of 'ALL', 'category_X', 'event_X_Y'
-
-    // Voucher code options
-    $code_quantity = (int)($_POST['code_quantity'] ?: 0);
-    $code_prefix = $_POST['code_prefix'] ?: '';
-    $code_length = (int)($_POST['code_length'] ?: 10);
 
     // Validation
     if (!$title) $errors[] = "Title is required.";
     if (!in_array($discount_type, ['PERCENT', 'FIXED'])) $errors[] = "Invalid discount type.";
     if ($discount_type === 'PERCENT' && !$percent_off) $errors[] = "Percent Off required.";
     if ($discount_type === 'FIXED' && !$amount_off) $errors[] = "Amount Off required.";
-    if ($code_quantity < 1) $errors[] = "Code quantity must be at least 1.";
-    if ($code_length < 4) $errors[] = "Code length must be at least 4.";
+    if (!in_array($status, ['ACTIVE', 'INACTIVE', 'EXPIRED', 'ARCHIVED'])) $errors[] = "Invalid status.";
 
     if (!$errors) {
         try {
             $pdo->beginTransaction();
 
-            // Insert voucher
-            $stmt = $pdo->prepare("INSERT INTO vouchers
-                (title, discount_type, percent_off, amount_off, currency, min_purchase_amount,
-                 start_at, end_at, created_by, created_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())");
+            // Update voucher
+            $stmt = $pdo->prepare("UPDATE vouchers SET
+                title = ?, discount_type = ?, percent_off = ?, amount_off = ?, 
+                currency = ?, min_purchase_amount = ?,
+                start_at = ?, end_at = ?, status = ?, updated_at = NOW()
+                WHERE id = ?");
             $stmt->execute([
                 $title,
                 $discount_type,
@@ -53,11 +77,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $min_purchase,
                 $start_at,
                 $end_at,
-                $created_by
+                $status,
+                $voucher_id
             ]);
-            $voucher_id = $pdo->lastInsertId();
 
-            // Insert voucher applicability
+            // Delete existing applicability
+            $stmt = $pdo->prepare("DELETE FROM voucher_applicability WHERE voucher_id = ?");
+            $stmt->execute([$voucher_id]);
+
+            // Insert new voucher applicability
             foreach ($applicability as $item) {
                 if ($item === 'ALL') {
                     $stmt = $pdo->prepare("INSERT INTO voucher_applicability (voucher_id, scope) VALUES (?, 'ALL')");
@@ -73,26 +101,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Insert voucher batch
-            $stmt = $pdo->prepare("INSERT INTO voucher_batches
-                (voucher_id, requested_quantity, generated_quantity, code_prefix, code_length, created_by, created_at)
-                VALUES (?, ?, 0, ?, ?, ?, NOW())");
-            $stmt->execute([$voucher_id, $code_quantity, $code_prefix, $code_length, $created_by]);
-            $batch_id = $pdo->lastInsertId();
-
-            // Generate codes
-            for ($i = 0; $i < $code_quantity; $i++) {
-                $code = $code_prefix . strtoupper(bin2hex(random_bytes($code_length / 2)));
-                $stmt = $pdo->prepare("INSERT INTO voucher_codes (voucher_id, batch_id, code, state, created_at) VALUES (?, ?, ?, 'AVAILABLE', NOW())");
-                $stmt->execute([$voucher_id, $batch_id, $code]);
-            }
-
-            // Update batch generated quantity
-            $stmt = $pdo->prepare("UPDATE voucher_batches SET generated_quantity=? WHERE id=?");
-            $stmt->execute([$code_quantity, $batch_id]);
-
             $pdo->commit();
-            header("Location: vouchers_list.php?success=1");
+            header("Location: voucher_view.php?id=" . $voucher_id . "&success=1");
             exit();
         } catch (Exception $e) {
             $pdo->rollBack();
@@ -108,7 +118,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create Voucher</title>
+    <title>Edit Voucher - <?= htmlspecialchars($voucher['title']) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Benton+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -129,6 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             --white: #ffffff;
             --success-green: #10b981;
             --error-red: #ef4444;
+            --warning-yellow: #f59e0b;
         }
 
         * {
@@ -159,8 +170,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             gap: 16px;
         }
 
-        .header-content {
-            text-align: left;
+        .header h1 {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--gray-900);
         }
 
         .back-btn {
@@ -178,18 +191,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         .back-btn:hover {
             background: var(--gray-50);
             border-color: var(--gray-400);
-        }
-
-        .header h1 {
-            font-size: 32px;
-            font-weight: 700;
-            color: var(--gray-900);
-            margin-bottom: 8px;
-        }
-
-        .header p {
-            color: var(--gray-600);
-            font-size: 18px;
         }
 
         .form-container {
@@ -368,31 +369,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             padding: 24px 32px;
             background: linear-gradient(135deg, var(--gray-50), var(--gray-100));
             border-top: 1px solid var(--gray-200);
+            display: flex;
+            gap: 16px;
+            justify-content: flex-end;
         }
 
-        .submit-btn {
-            width: 100%;
+        .btn {
             padding: 16px 24px;
-            background: linear-gradient(135deg, var(--eventbrite-orange), var(--eventbrite-orange-dark));
-            color: var(--white);
-            border: none;
             border-radius: 8px;
-            font-size: 18px;
+            font-size: 16px;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s ease;
             font-family: inherit;
+            text-decoration: none;
+            display: inline-block;
+            text-align: center;
+            border: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--eventbrite-orange), var(--eventbrite-orange-dark));
+            color: var(--white);
             box-shadow: 0 2px 4px rgba(255, 128, 0, 0.2);
         }
 
-        .submit-btn:hover {
+        .btn-primary:hover {
             background: linear-gradient(135deg, var(--eventbrite-orange-light), var(--eventbrite-orange));
             transform: translateY(-1px);
             box-shadow: 0 4px 12px rgba(255, 128, 0, 0.3);
         }
 
-        .submit-btn:active {
-            transform: translateY(0);
+        .btn-secondary {
+            background: var(--white);
+            color: var(--gray-700);
+            border: 2px solid var(--gray-300);
+        }
+
+        .btn-secondary:hover {
+            background: var(--gray-50);
+            border-color: var(--gray-400);
         }
 
         .alert {
@@ -415,25 +431,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-left-color: var(--success-green);
         }
 
-        .highlight-input {
-            position: relative;
+        .info-box {
+            background: #eff6ff;
+            border: 1px solid #bfdbfe;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 24px;
         }
 
-        .highlight-input::after {
-            content: '';
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            height: 2px;
-            background: linear-gradient(90deg, var(--eventbrite-orange), transparent);
-            border-radius: 8px 8px 0 0;
-            opacity: 0;
-            transition: opacity 0.2s ease;
+        .info-box h4 {
+            color: #1e40af;
+            margin-bottom: 8px;
+            font-size: 14px;
+            font-weight: 600;
         }
 
-        .highlight-input input:focus + .highlight-input::after {
-            opacity: 1;
+        .info-box p {
+            color: #1e40af;
+            font-size: 14px;
+            margin: 0;
         }
 
         @media (max-width: 768px) {
@@ -455,22 +471,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 grid-template-columns: 1fr;
             }
 
-            .header {
-                flex-direction: column;
-                align-items: stretch;
-                text-align: center;
-            }
-
-            .header-content {
-                text-align: center;
-            }
-
             .header h1 {
                 font-size: 28px;
             }
 
             .form-column {
                 padding: 24px;
+            }
+
+            .submit-section {
+                flex-direction: column;
             }
         }
 
@@ -494,11 +504,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="container">
         <div class="header">
-            <div class="header-content">
-                <h1>Create Voucher</h1>
-                <p>Set up promotional vouchers with custom discount codes</p>
-            </div>
-            <a href="vouchers_list.php" class="back-btn">← Back to List</a>
+            <h1>Edit Voucher</h1>
+            <a href="voucher_view.php?id=<?= $voucher_id ?>" class="back-btn">← Back to View</a>
         </div>
 
         <?php if ($errors): ?>
@@ -507,9 +514,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endforeach; ?>
         <?php endif; ?>
 
-        <?php if ($success): ?>
-            <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
-        <?php endif; ?>
+        <div class="info-box">
+            <h4>⚠️ Important Note</h4>
+            <p>Editing this voucher will not affect already generated codes. Only the voucher settings and applicability will be updated.</p>
+        </div>
 
         <form method="post" class="form-container">
             <div class="form-grid">
@@ -519,95 +527,107 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <div class="form-group">
                         <label for="title">Voucher Title</label>
-                        <input type="text" name="title" id="title" required placeholder="Enter a descriptive title">
+                        <input type="text" name="title" id="title" required placeholder="Enter a descriptive title" value="<?= htmlspecialchars($voucher['title']) ?>">
                     </div>
 
                     <div class="form-group">
                         <label for="discount_type">Discount Type</label>
                         <select name="discount_type" id="discount_type" required>
-                            <option value="PERCENT">Percentage Discount</option>
-                            <option value="FIXED">Fixed Amount Off</option>
+                            <option value="PERCENT" <?= $voucher['discount_type'] === 'PERCENT' ? 'selected' : '' ?>>Percentage Discount</option>
+                            <option value="FIXED" <?= $voucher['discount_type'] === 'FIXED' ? 'selected' : '' ?>>Fixed Amount Off</option>
                         </select>
                     </div>
 
-                    <div class="form-group" id="percent_group">
+                    <div class="form-group" id="percent_group" style="<?= $voucher['discount_type'] === 'PERCENT' ? '' : 'display:none;' ?>">
                         <label for="percent_off">Percentage Off (%)</label>
-                        <input type="number" step="0.01" name="percent_off" id="percent_off" placeholder="e.g., 25">
+                        <input type="number" step="0.01" name="percent_off" id="percent_off" placeholder="e.g., 25" value="<?= $voucher['percent_off'] ?>">
                     </div>
 
-                    <div class="form-group" id="amount_group" style="display:none;">
+                    <div class="form-group" id="amount_group" style="<?= $voucher['discount_type'] === 'FIXED' ? '' : 'display:none;' ?>">
                         <label for="amount_off">Amount Off</label>
-                        <input type="number" step="0.01" name="amount_off" id="amount_off" placeholder="e.g., 500">
+                        <input type="number" step="0.01" name="amount_off" id="amount_off" placeholder="e.g., 500" value="<?= $voucher['amount_off'] ?>">
                     </div>
 
                     <div class="form-group">
                         <label for="currency">Currency</label>
                         <select name="currency" id="currency" required>
-                            <option value="USD" selected>USD - US Dollar</option>
-                            <option value="EUR">EUR - Euro</option>
-                            <option value="GBP">GBP - British Pound</option>
-                            <option value="INR">INR - Indian Rupee</option>
-                            <option value="JPY">JPY - Japanese Yen</option>
-                            <option value="CAD">CAD - Canadian Dollar</option>
-                            <option value="AUD">AUD - Australian Dollar</option>
-                            <option value="CHF">CHF - Swiss Franc</option>
-                            <option value="CNY">CNY - Chinese Yuan</option>
-                            <option value="SGD">SGD - Singapore Dollar</option>
-                            <option value="HKD">HKD - Hong Kong Dollar</option>
-                            <option value="NZD">NZD - New Zealand Dollar</option>
-                            <option value="SEK">SEK - Swedish Krona</option>
-                            <option value="NOK">NOK - Norwegian Krone</option>
-                            <option value="DKK">DKK - Danish Krone</option>
-                            <option value="PLN">PLN - Polish Zloty</option>
-                            <option value="CZK">CZK - Czech Koruna</option>
-                            <option value="HUF">HUF - Hungarian Forint</option>
-                            <option value="BRL">BRL - Brazilian Real</option>
-                            <option value="MXN">MXN - Mexican Peso</option>
-                            <option value="ZAR">ZAR - South African Rand</option>
-                            <option value="KRW">KRW - South Korean Won</option>
-                            <option value="THB">THB - Thai Baht</option>
-                            <option value="MYR">MYR - Malaysian Ringgit</option>
-                            <option value="PHP">PHP - Philippine Peso</option>
-                            <option value="IDR">IDR - Indonesian Rupiah</option>
-                            <option value="VND">VND - Vietnamese Dong</option>
-                            <option value="TRY">TRY - Turkish Lira</option>
-                            <option value="RUB">RUB - Russian Ruble</option>
-                            <option value="AED">AED - UAE Dirham</option>
-                            <option value="SAR">SAR - Saudi Riyal</option>
-                            <option value="QAR">QAR - Qatari Riyal</option>
-                            <option value="KWD">KWD - Kuwaiti Dinar</option>
-                            <option value="BHD">BHD - Bahraini Dinar</option>
-                            <option value="OMR">OMR - Omani Rial</option>
-                            <option value="JOD">JOD - Jordanian Dinar</option>
-                            <option value="LBP">LBP - Lebanese Pound</option>
-                            <option value="EGP">EGP - Egyptian Pound</option>
-                            <option value="ILS">ILS - Israeli Shekel</option>
-                            <option value="PKR">PKR - Pakistani Rupee</option>
-                            <option value="BDT">BDT - Bangladeshi Taka</option>
-                            <option value="LKR">LKR - Sri Lankan Rupee</option>
-                            <option value="NPR">NPR - Nepalese Rupee</option>
-                            <option value="AFN">AFN - Afghan Afghani</option>
-                            <option value="IRR">IRR - Iranian Rial</option>
-                            <option value="IQD">IQD - Iraqi Dinar</option>
-                            <option value="SYP">SYP - Syrian Pound</option>
-                            <option value="YER">YER - Yemeni Rial</option>
+                            <option value="USD" <?= ($voucher['currency'] ?? 'USD') === 'USD' ? 'selected' : '' ?>>USD - US Dollar</option>
+                            <option value="EUR" <?= ($voucher['currency'] ?? 'USD') === 'EUR' ? 'selected' : '' ?>>EUR - Euro</option>
+                            <option value="GBP" <?= ($voucher['currency'] ?? 'USD') === 'GBP' ? 'selected' : '' ?>>GBP - British Pound</option>
+                            <option value="INR" <?= ($voucher['currency'] ?? 'USD') === 'INR' ? 'selected' : '' ?>>INR - Indian Rupee</option>
+                            <option value="JPY" <?= ($voucher['currency'] ?? 'USD') === 'JPY' ? 'selected' : '' ?>>JPY - Japanese Yen</option>
+                            <option value="CAD" <?= ($voucher['currency'] ?? 'USD') === 'CAD' ? 'selected' : '' ?>>CAD - Canadian Dollar</option>
+                            <option value="AUD" <?= ($voucher['currency'] ?? 'USD') === 'AUD' ? 'selected' : '' ?>>AUD - Australian Dollar</option>
+                            <option value="CHF" <?= ($voucher['currency'] ?? 'USD') === 'CHF' ? 'selected' : '' ?>>CHF - Swiss Franc</option>
+                            <option value="CNY" <?= ($voucher['currency'] ?? 'USD') === 'CNY' ? 'selected' : '' ?>>CNY - Chinese Yuan</option>
+                            <option value="SGD" <?= ($voucher['currency'] ?? 'USD') === 'SGD' ? 'selected' : '' ?>>SGD - Singapore Dollar</option>
+                            <option value="HKD" <?= ($voucher['currency'] ?? 'USD') === 'HKD' ? 'selected' : '' ?>>HKD - Hong Kong Dollar</option>
+                            <option value="NZD" <?= ($voucher['currency'] ?? 'USD') === 'NZD' ? 'selected' : '' ?>>NZD - New Zealand Dollar</option>
+                            <option value="SEK" <?= ($voucher['currency'] ?? 'USD') === 'SEK' ? 'selected' : '' ?>>SEK - Swedish Krona</option>
+                            <option value="NOK" <?= ($voucher['currency'] ?? 'USD') === 'NOK' ? 'selected' : '' ?>>NOK - Norwegian Krone</option>
+                            <option value="DKK" <?= ($voucher['currency'] ?? 'USD') === 'DKK' ? 'selected' : '' ?>>DKK - Danish Krone</option>
+                            <option value="PLN" <?= ($voucher['currency'] ?? 'USD') === 'PLN' ? 'selected' : '' ?>>PLN - Polish Zloty</option>
+                            <option value="CZK" <?= ($voucher['currency'] ?? 'USD') === 'CZK' ? 'selected' : '' ?>>CZK - Czech Koruna</option>
+                            <option value="HUF" <?= ($voucher['currency'] ?? 'USD') === 'HUF' ? 'selected' : '' ?>>HUF - Hungarian Forint</option>
+                            <option value="BRL" <?= ($voucher['currency'] ?? 'USD') === 'BRL' ? 'selected' : '' ?>>BRL - Brazilian Real</option>
+                            <option value="MXN" <?= ($voucher['currency'] ?? 'USD') === 'MXN' ? 'selected' : '' ?>>MXN - Mexican Peso</option>
+                            <option value="ZAR" <?= ($voucher['currency'] ?? 'USD') === 'ZAR' ? 'selected' : '' ?>>ZAR - South African Rand</option>
+                            <option value="KRW" <?= ($voucher['currency'] ?? 'USD') === 'KRW' ? 'selected' : '' ?>>KRW - South Korean Won</option>
+                            <option value="THB" <?= ($voucher['currency'] ?? 'USD') === 'THB' ? 'selected' : '' ?>>THB - Thai Baht</option>
+                            <option value="MYR" <?= ($voucher['currency'] ?? 'USD') === 'MYR' ? 'selected' : '' ?>>MYR - Malaysian Ringgit</option>
+                            <option value="PHP" <?= ($voucher['currency'] ?? 'USD') === 'PHP' ? 'selected' : '' ?>>PHP - Philippine Peso</option>
+                            <option value="IDR" <?= ($voucher['currency'] ?? 'USD') === 'IDR' ? 'selected' : '' ?>>IDR - Indonesian Rupiah</option>
+                            <option value="VND" <?= ($voucher['currency'] ?? 'USD') === 'VND' ? 'selected' : '' ?>>VND - Vietnamese Dong</option>
+                            <option value="TRY" <?= ($voucher['currency'] ?? 'USD') === 'TRY' ? 'selected' : '' ?>>TRY - Turkish Lira</option>
+                            <option value="RUB" <?= ($voucher['currency'] ?? 'USD') === 'RUB' ? 'selected' : '' ?>>RUB - Russian Ruble</option>
+                            <option value="AED" <?= ($voucher['currency'] ?? 'USD') === 'AED' ? 'selected' : '' ?>>AED - UAE Dirham</option>
+                            <option value="SAR" <?= ($voucher['currency'] ?? 'USD') === 'SAR' ? 'selected' : '' ?>>SAR - Saudi Riyal</option>
+                            <option value="QAR" <?= ($voucher['currency'] ?? 'USD') === 'QAR' ? 'selected' : '' ?>>QAR - Qatari Riyal</option>
+                            <option value="KWD" <?= ($voucher['currency'] ?? 'USD') === 'KWD' ? 'selected' : '' ?>>KWD - Kuwaiti Dinar</option>
+                            <option value="BHD" <?= ($voucher['currency'] ?? 'USD') === 'BHD' ? 'selected' : '' ?>>BHD - Bahraini Dinar</option>
+                            <option value="OMR" <?= ($voucher['currency'] ?? 'USD') === 'OMR' ? 'selected' : '' ?>>OMR - Omani Rial</option>
+                            <option value="JOD" <?= ($voucher['currency'] ?? 'USD') === 'JOD' ? 'selected' : '' ?>>JOD - Jordanian Dinar</option>
+                            <option value="LBP" <?= ($voucher['currency'] ?? 'USD') === 'LBP' ? 'selected' : '' ?>>LBP - Lebanese Pound</option>
+                            <option value="EGP" <?= ($voucher['currency'] ?? 'USD') === 'EGP' ? 'selected' : '' ?>>EGP - Egyptian Pound</option>
+                            <option value="ILS" <?= ($voucher['currency'] ?? 'USD') === 'ILS' ? 'selected' : '' ?>>ILS - Israeli Shekel</option>
+                            <option value="PKR" <?= ($voucher['currency'] ?? 'USD') === 'PKR' ? 'selected' : '' ?>>PKR - Pakistani Rupee</option>
+                            <option value="BDT" <?= ($voucher['currency'] ?? 'USD') === 'BDT' ? 'selected' : '' ?>>BDT - Bangladeshi Taka</option>
+                            <option value="LKR" <?= ($voucher['currency'] ?? 'USD') === 'LKR' ? 'selected' : '' ?>>LKR - Sri Lankan Rupee</option>
+                            <option value="NPR" <?= ($voucher['currency'] ?? 'USD') === 'NPR' ? 'selected' : '' ?>>NPR - Nepalese Rupee</option>
+                            <option value="AFN" <?= ($voucher['currency'] ?? 'USD') === 'AFN' ? 'selected' : '' ?>>AFN - Afghan Afghani</option>
+                            <option value="IRR" <?= ($voucher['currency'] ?? 'USD') === 'IRR' ? 'selected' : '' ?>>IRR - Iranian Rial</option>
+                            <option value="IQD" <?= ($voucher['currency'] ?? 'USD') === 'IQD' ? 'selected' : '' ?>>IQD - Iraqi Dinar</option>
+                            <option value="SYP" <?= ($voucher['currency'] ?? 'USD') === 'SYP' ? 'selected' : '' ?>>SYP - Syrian Pound</option>
+                            <option value="YER" <?= ($voucher['currency'] ?? 'USD') === 'YER' ? 'selected' : '' ?>>YER - Yemeni Rial</option>
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label for="min_purchase">Minimum Purchase Amount</label>
-                        <input type="number" step="0.01" name="min_purchase" id="min_purchase" placeholder="Optional minimum">
+                        <input type="number" step="0.01" name="min_purchase" id="min_purchase" placeholder="Optional minimum" value="<?= $voucher['min_purchase_amount'] ?>">
                     </div>
+
+
 
                     <div class="form-row">
                         <div class="form-group">
                             <label for="start_at">Start Date & Time</label>
-                            <input type="datetime-local" name="start_at" id="start_at" required>
+                            <input type="datetime-local" name="start_at" id="start_at" required value="<?= date('Y-m-d\TH:i', strtotime($voucher['start_at'])) ?>">
                         </div>
                         <div class="form-group">
                             <label for="end_at">End Date & Time</label>
-                            <input type="datetime-local" name="end_at" id="end_at" required>
+                            <input type="datetime-local" name="end_at" id="end_at" required value="<?= date('Y-m-d\TH:i', strtotime($voucher['end_at'])) ?>">
                         </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="status">Status</label>
+                        <select name="status" id="status" required>
+                            <option value="ACTIVE" <?= ($voucher['status'] ?? 'ACTIVE') === 'ACTIVE' ? 'selected' : '' ?>>Active</option>
+                            <option value="INACTIVE" <?= ($voucher['status'] ?? 'ACTIVE') === 'INACTIVE' ? 'selected' : '' ?>>Inactive</option>
+                            <option value="EXPIRED" <?= ($voucher['status'] ?? 'ACTIVE') === 'EXPIRED' ? 'selected' : '' ?>>Expired</option>
+                            <option value="ARCHIVED" <?= ($voucher['status'] ?? 'ACTIVE') === 'ARCHIVED' ? 'selected' : '' ?>>Archived</option>
+                        </select>
                     </div>
                 </div>
 
@@ -618,17 +638,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <div class="form-row">
                         <div class="form-group">
                             <label for="code_quantity">Number of Codes</label>
-                            <input type="number" name="code_quantity" id="code_quantity" required min="1" placeholder="e.g., 100">
+                            <input type="number" name="code_quantity" id="code_quantity" required min="1" placeholder="e.g., 100" value="<?= $voucher['requested_quantity'] ?>">
                         </div>
                         <div class="form-group">
                             <label for="code_length">Code Length</label>
-                            <input type="number" name="code_length" id="code_length" value="10" min="4" max="20">
+                            <input type="number" name="code_length" id="code_length" value="<?= $voucher['code_length'] ?>" min="4" max="20">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label for="code_prefix">Code Prefix (Optional)</label>
-                        <input type="text" name="code_prefix" id="code_prefix" placeholder="e.g., SAVE2024">
+                        <input type="text" name="code_prefix" id="code_prefix" placeholder="e.g., SAVE2024" value="<?= htmlspecialchars($voucher['code_prefix']) ?>">
                     </div>
 
                     <h2 class="section-title">Voucher Applicability</h2>
@@ -638,7 +658,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <div class="checkbox-container">
                             <div class="checkbox-item special-checkbox">
                                 <label>
-                                    <input type="checkbox" name="applicability[]" value="ALL" id="all_checkbox">
+                                    <input type="checkbox" name="applicability[]" value="ALL" id="all_checkbox" <?= in_array('ALL', array_column($existing_applicability, 'scope')) ? 'checked' : '' ?>>
                                     Apply to All Categories & Events
                                 </label>
                             </div>
@@ -647,7 +667,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <div class="category-group">
                                     <div class="checkbox-item">
                                         <label>
-                                            <input type="checkbox" class="category_checkbox" value="category_<?= $c['category_id'] ?>" name="applicability[]" id="cat_<?= $c['category_id'] ?>">
+                                            <input type="checkbox" class="category_checkbox" value="category_<?= $c['category_id'] ?>" name="applicability[]" id="cat_<?= $c['category_id'] ?>" <?= in_array($c['category_id'], array_column(array_filter($existing_applicability, function($a) { return $a['scope'] === 'CATEGORY'; }), 'category_id')) ? 'checked' : '' ?>>
                                             <?= htmlspecialchars($c['name']) ?>
                                         </label>
                                     </div>
@@ -660,7 +680,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <!-- Submit Section -->
                 <div class="submit-section">
-                    <button type="submit" class="submit-btn">Create Voucher & Generate Codes</button>
+                    <a href="voucher_view.php?id=<?= $voucher_id ?>" class="btn btn-secondary">Cancel</a>
+                    <button type="submit" class="btn btn-primary">Update Voucher</button>
                 </div>
             </div>
         </form>
@@ -676,9 +697,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             if (this.value === 'PERCENT') {
                 percentGroup.style.display = 'block';
                 amountGroup.style.display = 'none';
-            } else {
+            } else if (this.value === 'FIXED') {
                 percentGroup.style.display = 'none';
                 amountGroup.style.display = 'block';
+            } else {
+                percentGroup.style.display = 'none';
+                amountGroup.style.display = 'none';
             }
         });
 
@@ -850,6 +874,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
             });
+
+            // Trigger change event if checkbox is already checked
+            if (catCb.checked) {
+                catCb.dispatchEvent(new Event('change'));
+            }
         });
     </script>
 </body>

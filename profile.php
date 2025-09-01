@@ -1,62 +1,95 @@
-<?php
-session_start();
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit();
-}
-?>
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8">
-    <title>Profile</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <style>
-        body {
-            font-family: Arial;
-            background: #f0f0f0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Voucher Dashboard</title>
+  <style>
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      background: #f8f9fa;
+    }
 
-        .container {
-            background: #fff;
-            padding: 25px;
-            border-radius: 10px;
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-            width: 350px;
-            text-align: center;
-        }
+    /* Navbar */
+    .navbar {
+      background: #ffffff;
+      border-bottom: 1px solid #ddd;
+      padding: 12px 40px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+    }
 
-        h2 {
-            color: #333;
-        }
+    .navbar .logo {
+      font-size: 20px;
+      font-weight: bold;
+      color: #2c3e50;
+      letter-spacing: 0.5px;
+    }
 
-        a {
-            display: inline-block;
-            margin-top: 15px;
-            background: #ff4757;
-            color: #fff;
-            padding: 10px 15px;
-            text-decoration: none;
-            border-radius: 5px;
-        }
+    .nav-links {
+      display: flex;
+      gap: 12px;
+    }
 
-        a:hover {
-            background: #e84118;
-        }
-    </style>
+    /* Beautiful Buttons */
+    .btn {
+      padding: 8px 18px;
+      border-radius: 25px;
+      font-size: 14px;
+      font-weight: 500;
+      border: none;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .btn-primary {
+      background: #007bff;
+      color: #fff;
+    }
+    .btn-primary:hover {
+      background: #0056b3;
+    }
+
+    .btn-success {
+      background: #28a745;
+      color: #fff;
+    }
+    .btn-success:hover {
+      background: #1e7e34;
+    }
+
+    .btn-warning {
+      background: #fd7e14;
+      color: #fff;
+    }
+    .btn-warning:hover {
+      background: #e96a00;
+    }
+
+    .btn-danger {
+      background: #dc3545;
+      color: #fff;
+    }
+    .btn-danger:hover {
+      background: #b02a37;
+    }
+  </style>
 </head>
-
 <body>
-    <div class="container">
-        <h2>Welcome, <?= htmlspecialchars($_SESSION['username']) ?>!</h2>
-        <p>You are logged in successfully.</p>
-        <a href="logout.php">Logout</a>
+  <nav class="navbar">
+    <div class="logo">Voucher Dashboard</div>
+    <div class="nav-links">
+      <a href="voucher_create.php"><button class="btn btn-primary">Create Voucher</button></a>
+      <a href="vouchers_list.php"><button class="btn btn-success">Voucher List</button></a>
+      <a href="voucher_redeem.php"><button class="btn btn-warning">Redeem Voucher</button></a>
+      <a href="logout.php"><button class="btn btn-danger">Logout</button></a>
     </div>
+  </nav>
 </body>
-
 </html>
