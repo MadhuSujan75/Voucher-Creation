@@ -1,6 +1,10 @@
 <?php
 require 'db.php';
 
+// Start session to get current user
+session_start();
+$current_user_id = $_SESSION['user_id'] ?? null;
+
 $event_id = $_GET['id'] ?? null;
 
 if (!$event_id || !is_numeric($event_id)) {
@@ -24,6 +28,7 @@ if (!$event) {
 }
 
 // Fetch applicable vouchers for this event (one code per voucher)
+// Exclude vouchers that the current user has already used
 $vouchers_query = "
     SELECT DISTINCT v.*, vc.code, vc.state, vc.remaining_balance
     FROM vouchers v
@@ -44,11 +49,20 @@ $vouchers_query = "
         WHERE vc2.voucher_id = v.id 
         AND vc2.state = 'AVAILABLE'
     )
+    " . ($current_user_id ? "AND vc.id NOT IN (
+        SELECT vr.voucher_code_id 
+        FROM voucher_redemptions vr 
+        WHERE vr.user_id = ?
+    )" : "") . "
     ORDER BY v.discount_type, v.percent_off DESC, v.amount_off DESC
 ";
 
 $stmt = $pdo->prepare($vouchers_query);
-$stmt->execute([$event['category_id'], $event_id]);
+if ($current_user_id) {
+    $stmt->execute([$event['category_id'], $event_id, $current_user_id]);
+} else {
+    $stmt->execute([$event['category_id'], $event_id]);
+}
 $applicable_vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Default event price (you can add this to events table later)
@@ -57,6 +71,7 @@ $event_price = 50.00; // Default price for demo
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -727,11 +742,12 @@ $event_price = 50.00; // Default price for demo
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="breadcrumb">
-            <a href="categories.php">Categories</a> → 
-            <a href="events.php?category=<?= $event['category_id'] ?>"><?= htmlspecialchars($event['category_name']) ?></a> → 
+            <a href="categories.php">Categories</a> →
+            <a href="events.php?category=<?= $event['category_id'] ?>"><?= htmlspecialchars($event['category_name']) ?></a> →
             <?= htmlspecialchars($event['title']) ?>
         </div>
 
@@ -795,7 +811,7 @@ $event_price = 50.00; // Default price for demo
                             <input type="text" id="voucher-code" placeholder="Enter voucher code" maxlength="20">
                             <button type="button" class="voucher-btn" onclick="applyVoucher()">Apply</button>
                         </div>
-                        
+
                         <?php if (!empty($applicable_vouchers)): ?>
                             <div class="available-vouchers">
                                 <div class="vouchers-header" onclick="toggleVouchers()">
@@ -867,26 +883,10 @@ $event_price = 50.00; // Default price for demo
             const tickets = parseInt(document.getElementById('tickets').value);
             const subtotal = eventPrice * tickets;
             const finalPrice = subtotal - discountAmount;
-            
+
             document.getElementById('final-price').textContent = '$' + finalPrice.toFixed(2);
             document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
             document.getElementById('total-amount').textContent = '$' + finalPrice.toFixed(2);
-            
-            // Update discount amount if voucher is applied
-            if (appliedVoucher && discountAmount > 0) {
-                // Recalculate discount based on new subtotal
-                if (appliedVoucher.discount_type === 'PERCENT') {
-                    discountAmount = subtotal * (appliedVoucher.percent_off / 100);
-                } else {
-                    discountAmount = Math.min(appliedVoucher.amount_off, subtotal);
-                }
-                
-                const newFinalPrice = subtotal - discountAmount;
-                document.getElementById('final-price').textContent = '$' + newFinalPrice.toFixed(2);
-                document.getElementById('discount-amount').textContent = '-$' + discountAmount.toFixed(2);
-                document.getElementById('total-amount').textContent = '$' + newFinalPrice.toFixed(2);
-            }
-            
             document.getElementById('price-breakdown').style.display = 'block';
         }
 
@@ -949,7 +949,7 @@ $event_price = 50.00; // Default price for demo
         function toggleVouchers() {
             const content = document.getElementById('vouchers-content');
             const arrow = document.querySelector('.toggle-arrow');
-            
+
             if (content.style.display === 'none') {
                 content.style.display = 'block';
                 arrow.textContent = '▼';
@@ -963,7 +963,7 @@ $event_price = 50.00; // Default price for demo
 
         function applyVoucher(specificCode = null, specificVoucherId = null) {
             const voucherCode = specificCode || document.getElementById('voucher-code').value.trim();
-            
+
             if (!voucherCode) {
                 showAlert('Please enter a voucher code', 'error');
                 return;
@@ -990,20 +990,20 @@ $event_price = 50.00; // Default price for demo
             console.log('Looking for voucher code:', voucherCode);
             console.log('Looking for voucher ID:', specificVoucherId);
             console.log('Available vouchers:', availableVouchers);
-            
+
             // First try to find by exact code and ID match if provided
             let voucher = null;
             if (specificVoucherId) {
                 voucher = availableVouchers.find(v => v.code === voucherCode && v.id == specificVoucherId);
                 console.log('Found voucher by code and ID:', voucher);
             }
-            
+
             // If not found, fallback to code only
             if (!voucher) {
                 voucher = availableVouchers.find(v => v.code === voucherCode);
                 console.log('Found voucher by code only:', voucher);
             }
-            
+
             if (!voucher) {
                 alert('Invalid voucher code');
                 return;
@@ -1013,80 +1013,42 @@ $event_price = 50.00; // Default price for demo
             console.log('Applying voucher:', voucher.title, 'Code:', voucher.code, 'ID:', voucher.id);
             console.log('Available vouchers:', availableVouchers);
             console.log('Found voucher:', voucher);
-            
+
             appliedVoucher = voucher;
             const tickets = parseInt(document.getElementById('tickets').value);
             const subtotal = eventPrice * tickets;
-            
+
             // Calculate discount
             if (voucher.discount_type === 'PERCENT') {
                 discountAmount = subtotal * (voucher.percent_off / 100);
             } else {
                 discountAmount = Math.min(voucher.amount_off, subtotal);
             }
-            
+
             const finalPrice = subtotal - discountAmount;
-            
+
             // Update display
             document.getElementById('final-price').textContent = '$' + finalPrice.toFixed(2);
             document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
             document.getElementById('discount-amount').textContent = '-$' + discountAmount.toFixed(2);
             document.getElementById('total-amount').textContent = '$' + finalPrice.toFixed(2);
-            
-            // Update discount label to show applied code
-            document.getElementById('discount-label').textContent = `Discount (${voucher.code}):`;
-            
+
             // Show discount row
             document.getElementById('discount-row').style.display = 'flex';
             document.getElementById('price-breakdown').style.display = 'block';
-            
-            // Show success message without scrolling
-            showAlert(`Voucher "${voucher.code}" applied successfully!`, 'success');
-            
-            // Disable the apply button and input field to prevent multiple applications
-            const applyButton = document.querySelector('.voucher-btn');
-            const voucherInput = document.getElementById('voucher-code');
-            
-            if (applyButton) {
-                applyButton.disabled = true;
-                applyButton.textContent = 'Applied';
-                applyButton.style.background = 'var(--gray-400)';
-                console.log('Button state changed to Applied');
-            } else {
-                console.log('Apply button not found');
-            }
-            
-            if (voucherInput) {
-                voucherInput.disabled = true;
-                console.log('Voucher input disabled');
-            } else {
-                console.log('Voucher input not found');
-            }
+
+            // Show success message
+            showAlert('Voucher applied successfully!', 'success');
         }
 
         function showAlert(message, type) {
-            // Remove any existing toasts first
-            const existingToasts = document.querySelectorAll('.toast');
-            existingToasts.forEach(toast => toast.remove());
-            
-            const toastContainer = document.getElementById('toast-container');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            
-            // Get appropriate icon for each type
-            let icon = '✓';
-            if (type === 'error') icon = '✕';
-            else if (type === 'info') icon = 'ℹ';
-            
-            toast.innerHTML = `
-                <div class="toast-icon">${icon}</div>
-                <div class="toast-message">${message}</div>
-                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
-            `;
-            
-            toastContainer.appendChild(toast);
-            
-            // Trigger animation
+            const alertDiv = document.createElement('div');
+            alertDiv.className = `alert alert-${type}`;
+            alertDiv.textContent = message;
+
+            const form = document.getElementById('booking-form');
+            form.insertBefore(alertDiv, form.firstChild);
+
             setTimeout(() => {
                 toast.classList.add('show');
             }, 10);
@@ -1108,7 +1070,7 @@ $event_price = 50.00; // Default price for demo
             const tickets = parseInt(document.getElementById('tickets').value);
             const subtotal = eventPrice * tickets;
             const finalPrice = subtotal - discountAmount;
-            
+
             // Store booking data in sessionStorage for payment page
             const bookingData = {
                 eventId: <?= $event_id ?>,
@@ -1120,15 +1082,16 @@ $event_price = 50.00; // Default price for demo
                 voucherCode: appliedVoucher ? appliedVoucher.code : null,
                 voucherId: appliedVoucher ? appliedVoucher.id : null
             };
-            
+
             console.log('Storing booking data:', bookingData);
             console.log('Applied voucher:', appliedVoucher);
-            
+
             sessionStorage.setItem('bookingData', JSON.stringify(bookingData));
-            
+
             // Redirect to payment page
             window.location.href = 'payment.php';
         }
     </script>
 </body>
+
 </html>

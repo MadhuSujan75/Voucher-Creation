@@ -40,7 +40,7 @@ if (!$user) {
     $stmt->execute(['demo_user', 'demo@example.com', password_hash('demo123', PASSWORD_DEFAULT)]);
     $user_id = $pdo->lastInsertId();
     $_SESSION['user_id'] = $user_id;
-    
+
     $user = [
         'id' => $user_id,
         'username' => 'demo_user',
@@ -56,6 +56,7 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -378,8 +379,13 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
         }
 
         @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
         }
 
         .loading p {
@@ -392,7 +398,7 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                 grid-template-columns: 1fr;
                 gap: 32px;
             }
-            
+
             .order-summary {
                 position: static;
             }
@@ -402,21 +408,22 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
             .container {
                 padding: 16px;
             }
-            
+
             .payment-form {
                 padding: 24px;
             }
-            
+
             .order-summary {
                 padding: 24px;
             }
-            
+
             .header h1 {
                 font-size: 28px;
             }
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -439,14 +446,19 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                         </div>
                     </div>
 
-                    <div class="form-section">
+                    <div class="form-section" id="payment-section">
                         <h3>Payment Information</h3>
-                        <div class="form-group">
+                        <div class="form-group" id="card-group">
                             <label for="card-element">Card Details</label>
                             <div id="card-element" style="padding: 12px; border: 2px solid var(--gray-300); border-radius: 8px;">
                                 <!-- Stripe Elements will create form elements here -->
                             </div>
                             <div id="card-errors" role="alert"></div>
+                        </div>
+                        <div class="form-group" id="free-order-notice" style="display: none;">
+                            <div class="alert alert-success">
+                                <strong>🎉 Free Order!</strong> Your voucher covers the full amount. No payment required.
+                            </div>
                         </div>
                     </div>
 
@@ -498,9 +510,9 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
     </div>
 
     <script>
-        // Initialize Stripe
-        const stripe = Stripe('pk_test_51RzuPbB4RsBfqXlvibWioyIea8FWg4csZrJvazJsW8f7USf1TQrc3jUYUD5DWiFb7ul9pOZnEEUMNCUqJQSLBsIJ00LWWDwh54'); // Replace with your actual publishable key
-        
+        // Initialize Stripe - using test mode
+        const stripe = Stripe('pk_test_51RzuPbB4RsBfqXlvibWioyIea8FWg4csZrJvazJsW8f7USf1TQrc3jUYUD5DWiFb7ul9pOZnEEUMNCUqJQSLBsIJ00LWWDwh54');
+
         const elements = stripe.elements();
         const cardElement = elements.create('card', {
             style: {
@@ -519,6 +531,9 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
         // Update order summary with data from sessionStorage
         updateOrderSummary();
 
+        // Check if this is a zero-amount order and update UI accordingly
+        checkAndUpdateUIForZeroAmount();
+
         const form = document.getElementById('payment-form');
         const submitButton = document.getElementById('submit-button');
         const loading = document.getElementById('loading');
@@ -536,22 +551,51 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
         // Handle form submission
         form.addEventListener('submit', async function(event) {
             event.preventDefault();
-            
+
+            // Get booking data to check if amount is zero
+            let bookingData = null;
+            const sessionData = sessionStorage.getItem('bookingData');
+            if (sessionData) {
+                bookingData = JSON.parse(sessionData);
+            } else {
+                bookingData = <?= json_encode($booking_data) ?>;
+            }
+
             // Show loading state
             submitButton.disabled = true;
             loading.style.display = 'block';
-            
-            const {token, error} = await stripe.createToken(cardElement);
-            
-            if (error) {
-                // Show error to customer
-                const errorElement = document.getElementById('card-errors');
-                errorElement.textContent = error.message;
-                submitButton.disabled = false;
-                loading.style.display = 'none';
+
+            // Update loading text based on order type
+            const loadingText = loading.querySelector('p');
+            if (bookingData && bookingData.total <= 0) {
+                loadingText.textContent = 'Completing your free order...';
             } else {
-                // Process payment
-                await processPayment(token);
+                loadingText.textContent = 'Processing payment...';
+            }
+
+            // Check if total is zero (free order)
+            console.log('Checking if order is free. Total:', bookingData?.total);
+            if (bookingData && bookingData.total <= 0) {
+                console.log('Processing free order, skipping Stripe');
+                // For zero-amount orders, skip Stripe and process directly
+                await processPayment(null);
+            } else {
+                // For non-zero amounts, create Stripe token
+                const {
+                    token,
+                    error
+                } = await stripe.createToken(cardElement);
+
+                if (error) {
+                    // Show error to customer
+                    const errorElement = document.getElementById('card-errors');
+                    errorElement.textContent = error.message;
+                    submitButton.disabled = false;
+                    loading.style.display = 'none';
+                } else {
+                    // Process payment
+                    await processPayment(token);
+                }
             }
         });
 
@@ -559,19 +603,19 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
             const sessionData = sessionStorage.getItem('bookingData');
             if (sessionData) {
                 const bookingData = JSON.parse(sessionData);
-                
+
                 // Update event title
                 const eventTitle = document.querySelector('.event-details h4');
                 if (eventTitle) {
                     eventTitle.textContent = bookingData.eventTitle;
                 }
-                
+
                 // Update ticket count
                 const ticketCount = document.querySelector('.event-details p');
                 if (ticketCount) {
                     ticketCount.textContent = bookingData.tickets + ' ticket' + (bookingData.tickets > 1 ? 's' : '');
                 }
-                
+
                 // Update price breakdown
                 const priceRows = document.querySelectorAll('.price-row');
                 if (priceRows.length >= 2) {
@@ -580,20 +624,27 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                     if (subtotalElement) {
                         subtotalElement.textContent = '$' + bookingData.subtotal.toFixed(2);
                     }
-                    
+
                     // Update total (last row)
                     const totalElement = priceRows[priceRows.length - 1].querySelector('span:last-child');
                     if (totalElement) {
                         totalElement.textContent = '$' + bookingData.total.toFixed(2);
                     }
                 }
-                
+
                 // Update payment button
                 const paymentBtn = document.querySelector('.payment-btn');
                 if (paymentBtn) {
-                    paymentBtn.textContent = 'Pay $' + bookingData.total.toFixed(2);
+                    if (bookingData.total <= 0) {
+                        paymentBtn.textContent = 'Complete Free Order';
+                    } else {
+                        paymentBtn.textContent = 'Pay $' + bookingData.total.toFixed(2);
+                    }
                 }
-                
+
+                // Check and update UI for zero amount
+                checkAndUpdateUIForZeroAmount();
+
                 // Show discount if applicable
                 if (bookingData.discount > 0) {
                     const discountRow = document.querySelector('.price-row.discount');
@@ -608,7 +659,7 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                             discountAmount.textContent = '-$' + bookingData.discount.toFixed(2);
                         }
                     }
-                    
+
                     // Show voucher info if available
                     if (bookingData.voucherCode) {
                         const voucherInfo = document.querySelector('.voucher-info');
@@ -626,7 +677,7 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                     if (discountRow) {
                         discountRow.style.display = 'none';
                     }
-                    
+
                     // Hide voucher info if no voucher
                     const voucherInfo = document.querySelector('.voucher-info');
                     if (voucherInfo) {
@@ -647,47 +698,88 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                     // Fallback to PHP data if sessionStorage is not available
                     bookingData = <?= json_encode($booking_data) ?>;
                 }
-                
+
+                console.log('Processing payment with data:', {
+                    token: token ? token.id : null,
+                    bookingData: bookingData,
+                    userId: <?= $user_id ?>
+                });
+
                 const response = await fetch('process_payment.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     body: JSON.stringify({
-                        token: token.id,
+                        token: token ? token.id : null,
                         booking_data: bookingData,
                         user_id: <?= $user_id ?>
                     })
                 });
 
+                console.log('Response status:', response.status);
                 const result = await response.json();
-                
+                console.log('Payment result:', result);
+
                 if (result.success) {
                     // Payment successful
+                    console.log('Payment successful, redirecting to order:', result.order_id);
                     window.location.href = 'payment_success.php?order_id=' + result.order_id;
                 } else {
                     // Payment failed
+                    console.error('Payment failed:', result.message);
                     showError(result.message || 'Payment failed. Please try again.');
                 }
             } catch (error) {
+                console.error('Payment error:', error);
                 showError('An error occurred. Please try again.');
             }
-            
+
             submitButton.disabled = false;
             loading.style.display = 'none';
+        }
+
+        function checkAndUpdateUIForZeroAmount() {
+            // Get booking data to check if amount is zero
+            let bookingData = null;
+            const sessionData = sessionStorage.getItem('bookingData');
+            if (sessionData) {
+                bookingData = JSON.parse(sessionData);
+            } else {
+                bookingData = <?= json_encode($booking_data) ?>;
+            }
+
+            console.log('checkAndUpdateUIForZeroAmount called with bookingData:', bookingData);
+            console.log('Total amount:', bookingData?.total);
+
+            if (bookingData && bookingData.total <= 0) {
+                console.log('Updating UI for zero amount order');
+                // Hide card input and show free order notice
+                document.getElementById('card-group').style.display = 'none';
+                document.getElementById('free-order-notice').style.display = 'block';
+
+                // Update payment button text
+                const paymentBtn = document.querySelector('.payment-btn');
+                if (paymentBtn) {
+                    paymentBtn.textContent = 'Complete Free Order';
+                }
+            } else {
+                console.log('Order has non-zero amount, keeping normal UI');
+            }
         }
 
         function showError(message) {
             const errorDiv = document.createElement('div');
             errorDiv.className = 'alert alert-error';
             errorDiv.textContent = message;
-            
+
             form.insertBefore(errorDiv, form.firstChild);
-            
+
             setTimeout(() => {
                 errorDiv.remove();
             }, 5000);
         }
     </script>
 </body>
+
 </html>

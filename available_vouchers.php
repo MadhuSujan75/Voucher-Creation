@@ -1,7 +1,12 @@
 <?php
 require 'db.php';
 
+// Start session to get current user
+session_start();
+$current_user_id = $_SESSION['user_id'] ?? null;
+
 // Fetch all available voucher codes (one per voucher)
+// Exclude vouchers that the current user has already used
 $vouchers_query = "
     SELECT DISTINCT v.*, vc.code, vc.state, vc.remaining_balance
     FROM vouchers v
@@ -16,16 +21,26 @@ $vouchers_query = "
         WHERE vc2.voucher_id = v.id 
         AND vc2.state = 'AVAILABLE'
     )
+    " . ($current_user_id ? "AND vc.id NOT IN (
+        SELECT vr.voucher_code_id 
+        FROM voucher_redemptions vr 
+        WHERE vr.user_id = ?
+    )" : "") . "
     ORDER BY v.discount_type, v.percent_off DESC, v.amount_off DESC
 ";
 
 $stmt = $pdo->prepare($vouchers_query);
-$stmt->execute();
+if ($current_user_id) {
+    $stmt->execute([$current_user_id]);
+} else {
+    $stmt->execute();
+}
 $available_vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -297,6 +312,7 @@ $available_vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="header">
@@ -321,15 +337,15 @@ $available_vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 $<?= number_format($voucher['amount_off'], 2) ?> OFF
                             <?php endif; ?>
                         </div>
-                        
+
                         <div class="voucher-title"><?= htmlspecialchars($voucher['title']) ?></div>
-                        
+
                         <div class="voucher-code-section">
                             <div class="voucher-code-label">Discount Code</div>
                             <div class="voucher-code" id="code-<?= $voucher['id'] ?>"><?= htmlspecialchars($voucher['code']) ?></div>
                             <button class="copy-btn" onclick="copyCode('<?= $voucher['id'] ?>')">Copy Code</button>
                         </div>
-                        
+
                         <div class="voucher-details">
                             <div class="detail-row">
                                 <span class="detail-label">Valid Until:</span>
@@ -346,7 +362,7 @@ $available_vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
                                 <span class="detail-value">$<?= number_format($voucher['remaining_balance'], 2) ?></span>
                             </div>
                         </div>
-                        
+
                         <a href="events.php" class="use-voucher-btn">Use This Code</a>
                     </div>
                 <?php endforeach; ?>
@@ -360,14 +376,14 @@ $available_vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         function copyCode(voucherId) {
             const codeElement = document.getElementById('code-' + voucherId);
             const code = codeElement.textContent;
-            
+
             navigator.clipboard.writeText(code).then(function() {
                 // Change button text temporarily
                 const button = event.target;
                 const originalText = button.textContent;
                 button.textContent = 'Copied!';
                 button.style.background = 'var(--success-green)';
-                
+
                 setTimeout(function() {
                     button.textContent = originalText;
                     button.style.background = 'var(--eventbrite-orange)';
@@ -379,4 +395,5 @@ $available_vouchers = $stmt->fetchAll(PDO::FETCH_ASSOC);
         }
     </script>
 </body>
+
 </html>
