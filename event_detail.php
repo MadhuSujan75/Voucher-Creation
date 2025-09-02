@@ -63,24 +63,37 @@ $event_price = 50.00; // Default price for demo
     <title><?= htmlspecialchars($event['title']) ?> - Event Details</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Benton+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
         :root {
-            --eventbrite-orange: #ff8000;
-            --eventbrite-orange-light: #ff9524;
-            --eventbrite-orange-dark: #e6730d;
-            --gray-900: #1e293b;
-            --gray-800: #334155;
-            --gray-700: #475569;
-            --gray-600: #64748b;
-            --gray-500: #94a3b8;
-            --gray-400: #cbd5e1;
-            --gray-300: #e2e8f0;
-            --gray-200: #f1f5f9;
-            --gray-100: #f8fafc;
+            --primary-orange: #ff6b35;
+            --primary-orange-light: #ff8a5c;
+            --primary-orange-dark: #e55a2b;
+            --secondary-orange: #ffa726;
+            --accent-green: #4caf50;
+            --accent-red: #f44336;
+            --accent-blue: #2196f3;
+            
+            --gray-900: #1a1a1a;
+            --gray-800: #2d2d2d;
+            --gray-700: #404040;
+            --gray-600: #666666;
+            --gray-500: #999999;
+            --gray-400: #cccccc;
+            --gray-300: #e0e0e0;
+            --gray-200: #f0f0f0;
+            --gray-100: #f8f8f8;
             --white: #ffffff;
-            --success-green: #10b981;
-            --error-red: #ef4444;
+            
+            --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.1);
+            --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.15);
+            --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.2);
+            --shadow-xl: 0 16px 48px rgba(0, 0, 0, 0.25);
+            
+            --border-radius-sm: 8px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 16px;
+            --border-radius-xl: 24px;
         }
 
         * {
@@ -90,24 +103,28 @@ $event_price = 50.00; // Default price for demo
         }
 
         body {
-            font-family: 'Benton Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--gray-100);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: var(--gray-100);
             color: var(--gray-800);
-            line-height: 1.5;
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
         .container {
-            max-width: 1200px;
+            max-width: 1400px;
             margin: 0 auto;
-            padding: 24px;
+            padding: 12px;
         }
 
         .breadcrumb {
-            margin-bottom: 16px;
+            margin-bottom: 12px;
+            padding: 4px 0;
+            color: var(--gray-600);
+            font-size: 13px;
         }
 
         .breadcrumb a {
-            color: var(--eventbrite-orange);
+            color: var(--primary-orange);
             text-decoration: none;
             font-weight: 500;
         }
@@ -118,110 +135,123 @@ $event_price = 50.00; // Default price for demo
 
         .event-header {
             display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 48px;
-            margin-bottom: 48px;
+            grid-template-columns: 1fr 420px;
+            gap: 24px;
+            margin-bottom: 16px;
         }
 
         .event-info {
             background: var(--white);
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius-md);
+            padding: 16px;
+            border: 1px solid var(--gray-200);
         }
 
         .event-category {
             display: inline-block;
-            background: var(--gray-100);
-            color: var(--gray-700);
-            padding: 6px 16px;
-            border-radius: 20px;
-            font-size: 14px;
+            background: var(--primary-orange);
+            color: var(--white);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
             font-weight: 600;
-            margin-bottom: 16px;
+            margin-bottom: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .event-title {
-            font-size: 36px;
+            font-size: 28px;
             font-weight: 700;
             color: var(--gray-900);
-            margin-bottom: 16px;
+            margin-bottom: 12px;
             line-height: 1.2;
         }
 
         .event-description {
-            font-size: 16px;
+            font-size: 14px;
             color: var(--gray-600);
-            line-height: 1.6;
-            margin-bottom: 32px;
+            line-height: 1.5;
+            margin-bottom: 16px;
         }
 
         .event-details {
             display: grid;
-            gap: 16px;
+            gap: 8px;
         }
 
         .event-detail {
             display: flex;
             align-items: center;
-            padding: 16px;
-            background: var(--gray-50);
-            border-radius: 12px;
+            padding: 12px;
+            background: var(--white);
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--gray-200);
         }
 
         .event-detail-icon {
-            width: 48px;
-            height: 48px;
-            background: var(--eventbrite-orange);
-            border-radius: 12px;
+            width: 32px;
+            height: 32px;
+            background: var(--primary-orange);
+            border-radius: var(--border-radius-sm);
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-right: 16px;
-            font-size: 20px;
+            margin-right: 12px;
+            font-size: 16px;
             color: var(--white);
         }
 
         .event-detail-content h4 {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             color: var(--gray-900);
-            margin-bottom: 4px;
+            margin-bottom: 2px;
         }
 
         .event-detail-content p {
-            font-size: 14px;
+            font-size: 13px;
             color: var(--gray-600);
         }
 
         .booking-section {
             background: var(--white);
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius-md);
+            padding: 16px;
+            border: 1px solid var(--gray-200);
             height: fit-content;
+            position: sticky;
+            top: 12px;
         }
 
         .price-display {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 16px;
+            padding: 12px;
+            background: var(--gray-50);
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--gray-200);
         }
 
         .price {
-            font-size: 48px;
+            font-size: 32px;
             font-weight: 700;
-            color: var(--eventbrite-orange);
-            margin-bottom: 8px;
+            color: var(--primary-orange);
+            margin-bottom: 2px;
+            line-height: 1;
         }
 
         .price-label {
-            font-size: 16px;
+            font-size: 12px;
             color: var(--gray-600);
+            font-weight: 500;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .booking-form {
             display: grid;
-            gap: 20px;
+            gap: 12px;
         }
 
         .form-group {
@@ -231,65 +261,87 @@ $event_price = 50.00; // Default price for demo
 
         .form-group label {
             font-weight: 600;
-            color: var(--gray-700);
-            margin-bottom: 8px;
-            font-size: 14px;
+            color: var(--gray-800);
+            margin-bottom: 6px;
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .form-group input,
         .form-group select {
-            padding: 12px 16px;
-            border: 2px solid var(--gray-300);
-            border-radius: 8px;
-            font-size: 16px;
+            padding: 10px 12px;
+            border: 1px solid var(--gray-300);
+            border-radius: var(--border-radius-sm);
+            font-size: 14px;
             font-family: inherit;
-            transition: all 0.2s ease;
+            background: var(--white);
         }
 
         .form-group input:focus,
         .form-group select:focus {
             outline: none;
-            border-color: var(--eventbrite-orange);
-            box-shadow: 0 0 0 3px rgba(255, 128, 0, 0.1);
+            border-color: var(--primary-orange);
+        }
+
+        .form-group select {
+            cursor: pointer;
+            background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+            background-position: right 12px center;
+            background-repeat: no-repeat;
+            background-size: 16px;
+            padding-right: 40px;
         }
 
         .voucher-section {
-            border: 2px solid var(--gray-200);
-            border-radius: 16px;
-            padding: 24px;
-            background: var(--gray-50);
+            border: 1px solid var(--gray-200);
+            border-radius: var(--border-radius-sm);
+            padding: 12px;
+            background: var(--white);
         }
 
         .voucher-section h4 {
-            font-size: 18px;
-            font-weight: 700;
+            font-size: 14px;
+            font-weight: 600;
             color: var(--gray-900);
-            margin-bottom: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .voucher-section h4::before {
+            content: '🎟️';
+            font-size: 14px;
         }
 
         .voucher-input-group {
             display: flex;
-            gap: 12px;
-            margin-bottom: 20px;
+            gap: 6px;
+            margin-bottom: 10px;
         }
 
         .voucher-input-group input {
             flex: 1;
+            text-transform: uppercase;
+            letter-spacing: 1px;
         }
 
         .voucher-btn {
-            padding: 12px 20px;
-            background: var(--eventbrite-orange);
+            padding: 10px 12px;
+            background: var(--primary-orange);
             color: var(--white);
             border: none;
-            border-radius: 8px;
+            border-radius: var(--border-radius-sm);
             font-weight: 600;
+            font-size: 13px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .voucher-btn:hover {
-            background: var(--eventbrite-orange-dark);
+            background: var(--primary-orange-dark);
         }
 
         .voucher-btn:disabled {
@@ -297,227 +349,380 @@ $event_price = 50.00; // Default price for demo
             cursor: not-allowed;
         }
 
+        #voucher-code:disabled {
+            background: var(--gray-100);
+            color: var(--gray-500);
+            cursor: not-allowed;
+            border-color: var(--gray-300);
+        }
+
         .available-vouchers {
-            margin-top: 20px;
-            border-radius: 16px;
+            margin-top: 12px;
+            border-radius: var(--border-radius-sm);
             background: var(--white);
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border: 1px solid var(--gray-300);
             overflow: hidden;
         }
 
         .vouchers-header {
-            padding: 24px 32px;
-            background: linear-gradient(135deg, var(--eventbrite-orange), var(--eventbrite-orange-dark));
-            color: var(--white);
-            font-weight: 700;
-            font-size: 18px;
-            text-align: center;
+            padding: 10px 12px;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            font-weight: 600;
+            font-size: 14px;
             cursor: pointer;
-            border-radius: 16px 16px 0 0;
             display: flex;
             justify-content: space-between;
             align-items: center;
             transition: all 0.2s ease;
+            border-bottom: 1px solid var(--gray-200);
         }
 
         .vouchers-header:hover {
-            background: linear-gradient(135deg, var(--eventbrite-orange-dark), var(--eventbrite-orange));
+            background: var(--gray-200);
+        }
+
+        .vouchers-header::before {
+            content: '🎟️';
+            margin-right: 8px;
+            font-size: 16px;
         }
 
         .toggle-arrow {
             font-size: 12px;
             transition: transform 0.2s ease;
+            color: var(--gray-600);
         }
 
         .vouchers-content {
-            max-height: 400px;
+            max-height: 300px;
             overflow-y: auto;
-            border: 1px solid var(--gray-200);
-            border-top: none;
-            border-radius: 0 0 16px 16px;
-            padding: 8px 0;
+            padding: 0;
+            background: var(--white);
+        }
+
+        .vouchers-content::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .vouchers-content::-webkit-scrollbar-track {
+            background: var(--gray-200);
+            border-radius: 3px;
+        }
+
+        .vouchers-content::-webkit-scrollbar-thumb {
+            background: var(--primary-orange);
+            border-radius: 3px;
         }
 
         .voucher-item {
-            padding: 28px 32px;
-            border-bottom: 1px solid var(--gray-100);
+            padding: 10px 12px;
             cursor: pointer;
-            transition: all 0.3s ease;
+            transition: all 0.2s ease;
             background: var(--white);
-            position: relative;
-            overflow: hidden;
-            margin: 8px 16px;
-            border-radius: 12px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
         }
 
         .voucher-item:hover {
             background: var(--gray-50);
-            transform: translateX(4px);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
         }
 
         .voucher-item:last-child {
             border-bottom: none;
         }
 
-        .voucher-item::before {
+        .voucher-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex: 1;
+        }
+
+        .voucher-badge {
+            background: var(--primary-orange);
+            color: var(--white);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .voucher-info {
+            flex: 1;
+        }
+
+        .voucher-title {
+            font-weight: 600;
+            color: var(--gray-900);
+            font-size: 14px;
+            margin-bottom: 2px;
+        }
+
+        .voucher-code {
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        .voucher-action {
+            color: var(--primary-orange);
+            font-weight: 600;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .apply-icon {
+            font-size: 16px;
+            transition: transform 0.2s ease;
+        }
+
+        .voucher-item:hover .apply-icon {
+            transform: translateX(2px);
+        }
+
+        .price-breakdown {
+            background: var(--gray-50);
+            border-radius: var(--border-radius-sm);
+            padding: 12px;
+            margin: 12px 0;
+            border: 1px solid var(--gray-200);
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 6px;
+            padding: 2px 0;
+            font-size: 13px;
+        }
+
+        .price-row.total {
+            border-top: 1px solid var(--gray-300);
+            padding-top: 8px;
+            margin-top: 8px;
+            font-weight: 700;
+            font-size: 15px;
+            color: var(--gray-900);
+        }
+
+        .discount {
+            color: var(--accent-green);
+            font-weight: 600;
+        }
+
+        .book-btn {
+            width: 100%;
+            padding: 12px 20px;
+            background: var(--primary-orange);
+            color: var(--white);
+            border: none;
+            border-radius: var(--border-radius-sm);
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .book-btn:hover {
+            background: var(--primary-orange-dark);
+        }
+
+        .book-btn:disabled {
+            background: var(--gray-400);
+            cursor: not-allowed;
+        }
+
+        /* Swiggy-style Toast */
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+
+        .toast {
+            background: var(--white);
+            border-radius: 12px;
+            padding: 16px 20px;
+            margin-bottom: 12px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
+            border: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 14px;
+            font-weight: 500;
+            transform: translateX(100%);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .toast.show {
+            transform: translateX(0);
+            opacity: 1;
+        }
+
+        .toast::before {
             content: '';
             position: absolute;
             left: 0;
             top: 0;
             bottom: 0;
             width: 4px;
-            background: var(--eventbrite-orange);
-            transform: scaleY(0);
-            transition: transform 0.3s ease;
+            background: var(--primary-orange);
         }
 
-        .voucher-item:hover::before {
-            transform: scaleY(1);
+        .toast-success::before {
+            background: #10b981;
         }
 
-        .voucher-badge {
-            display: inline-block;
-            background: var(--eventbrite-orange);
-            color: var(--white);
-            padding: 8px 16px;
-            border-radius: 25px;
-            font-size: 16px;
-            font-weight: 700;
-            margin-bottom: 16px;
+        .toast-error::before {
+            background: #ef4444;
         }
 
-        .voucher-info {
-            margin-bottom: 20px;
+        .toast-info::before {
+            background: #3b82f6;
         }
 
-        .voucher-title {
-            font-weight: 600;
-            color: var(--gray-900);
-            margin-bottom: 12px;
-            font-size: 18px;
-        }
-
-        .voucher-code {
-            background: var(--gray-50);
-            padding: 16px 20px;
-            border-radius: 12px;
-            font-family: 'Courier New', monospace;
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--gray-800);
-            border: 3px dashed var(--eventbrite-orange);
-            text-align: center;
-            margin-bottom: 16px;
-        }
-
-        .voucher-action {
+        .toast-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
             display: flex;
-            justify-content: space-between;
             align-items: center;
-            color: var(--eventbrite-orange);
+            justify-content: center;
+            font-size: 12px;
             font-weight: 600;
-            padding: 12px 16px;
-            background: var(--gray-50);
-            border-radius: 8px;
-        }
-
-        .apply-text {
-            font-size: 16px;
-        }
-
-        .apply-icon {
-            font-size: 20px;
-            transition: transform 0.2s ease;
-        }
-
-        .voucher-item:hover .apply-icon {
-            transform: translateX(4px);
-        }
-
-        .price-breakdown {
-            background: var(--gray-50);
-            border-radius: 8px;
-            padding: 16px;
-            margin: 20px 0;
-        }
-
-        .price-row {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 8px;
-        }
-
-        .price-row.total {
-            border-top: 1px solid var(--gray-300);
-            padding-top: 8px;
-            font-weight: 600;
-            font-size: 18px;
-        }
-
-        .discount {
-            color: var(--success-green);
-        }
-
-        .book-btn {
-            width: 100%;
-            padding: 16px 24px;
-            background: var(--eventbrite-orange);
             color: var(--white);
+            flex-shrink: 0;
+        }
+
+        .toast-success .toast-icon {
+            background: #10b981;
+        }
+
+        .toast-error .toast-icon {
+            background: #ef4444;
+        }
+
+        .toast-info .toast-icon {
+            background: #3b82f6;
+        }
+
+        .toast-message {
+            flex: 1;
+            color: var(--gray-800);
+            line-height: 1.4;
+        }
+
+        .toast-close {
+            background: none;
             border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 600;
+            color: var(--gray-400);
             cursor: pointer;
+            padding: 4px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             transition: all 0.2s ease;
+            flex-shrink: 0;
         }
 
-        .book-btn:hover {
-            background: var(--eventbrite-orange-dark);
-            transform: translateY(-1px);
+        .toast-close:hover {
+            background: var(--gray-100);
+            color: var(--gray-600);
         }
 
-        .book-btn:disabled {
-            background: var(--gray-400);
-            cursor: not-allowed;
-            transform: none;
+        /* Mobile responsive */
+        @media (max-width: 768px) {
+            .toast-container {
+                top: 10px;
+                right: 10px;
+                left: 10px;
+                max-width: none;
+            }
+            
+            .toast {
+                padding: 14px 16px;
+                font-size: 13px;
+            }
         }
 
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-weight: 500;
+        /* Responsive Design */
+        @media (max-width: 1200px) {
+            .event-header {
+                grid-template-columns: 1fr 400px;
+                gap: 20px;
+            }
         }
 
-        .alert-success {
-            background: #f0fdf4;
-            color: #166534;
-            border: 1px solid #bbf7d0;
-        }
-
-        .alert-error {
-            background: #fef2f2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
+        @media (max-width: 1024px) {
+            .event-header {
+                grid-template-columns: 1fr;
+                gap: 16px;
+            }
+            
+            .booking-section {
+                position: static;
+            }
         }
 
         @media (max-width: 768px) {
             .container {
-                padding: 16px;
+                padding: 8px;
             }
 
-            .event-header {
-                grid-template-columns: 1fr;
-                gap: 24px;
+            .event-info {
+                padding: 12px;
             }
 
             .event-title {
-                font-size: 28px;
+                font-size: 24px;
             }
 
             .price {
-                font-size: 36px;
+                font-size: 28px;
+            }
+
+            .voucher-item {
+                padding: 8px 10px;
+            }
+
+            .book-btn {
+                padding: 10px 16px;
+                font-size: 13px;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .event-title {
+                font-size: 20px;
+            }
+
+            .price {
+                font-size: 24px;
+            }
+
+            .voucher-input-group {
+                flex-direction: column;
+            }
+
+            .voucher-btn {
+                width: 100%;
             }
         }
     </style>
@@ -594,25 +799,27 @@ $event_price = 50.00; // Default price for demo
                         <?php if (!empty($applicable_vouchers)): ?>
                             <div class="available-vouchers">
                                 <div class="vouchers-header" onclick="toggleVouchers()">
-                                    <span>🎟️ Available Discount Codes</span>
+                                    <span>Available Discount Codes</span>
                                     <span class="toggle-arrow">▼</span>
                                 </div>
                                 <div class="vouchers-content" id="vouchers-content">
                                     <?php foreach ($applicable_vouchers as $voucher): ?>
                                         <div class="voucher-item" onclick="selectVoucher('<?= htmlspecialchars($voucher['code']) ?>', <?= $voucher['id'] ?>)">
-                                            <div class="voucher-badge">
-                                                <?php if ($voucher['discount_type'] === 'PERCENT'): ?>
-                                                    <?= $voucher['percent_off'] ?>% OFF
-                                                <?php else: ?>
-                                                    $<?= number_format($voucher['amount_off'], 2) ?> OFF
-                                                <?php endif; ?>
-                                            </div>
-                                            <div class="voucher-info">
-                                                <div class="voucher-title"><?= htmlspecialchars($voucher['title']) ?></div>
-                                                <div class="voucher-code"><?= htmlspecialchars($voucher['code']) ?></div>
+                                            <div class="voucher-left">
+                                                <div class="voucher-badge">
+                                                    <?php if ($voucher['discount_type'] === 'PERCENT'): ?>
+                                                        <?= $voucher['percent_off'] ?>% OFF
+                                                    <?php else: ?>
+                                                        $<?= number_format($voucher['amount_off'], 2) ?> OFF
+                                                    <?php endif; ?>
+                                                </div>
+                                                <div class="voucher-info">
+                                                    <div class="voucher-title"><?= htmlspecialchars($voucher['title']) ?></div>
+                                                    <div class="voucher-code"><?= htmlspecialchars($voucher['code']) ?></div>
+                                                </div>
                                             </div>
                                             <div class="voucher-action">
-                                                <span class="apply-text">Click to Apply</span>
+                                                <span>Apply</span>
                                                 <span class="apply-icon">→</span>
                                             </div>
                                         </div>
@@ -628,7 +835,10 @@ $event_price = 50.00; // Default price for demo
                             <span id="subtotal">$<?= number_format($event_price, 2) ?></span>
                         </div>
                         <div class="price-row discount" id="discount-row" style="display: none;">
-                            <span>Discount:</span>
+                            <div style="display: flex; align-items: center; gap: 8px;">
+                                <span id="discount-label">Discount:</span>
+                                <button type="button" onclick="clearVoucher(event); return false;" style="background: none; border: none; color: var(--accent-red); font-size: 12px; cursor: pointer; text-decoration: underline;">Remove</button>
+                            </div>
                             <span id="discount-amount">-$0.00</span>
                         </div>
                         <div class="price-row total">
@@ -645,6 +855,9 @@ $event_price = 50.00; // Default price for demo
         </div>
     </div>
 
+    <!-- Toast Container -->
+    <div class="toast-container" id="toast-container"></div>
+
     <script>
         const eventPrice = <?= $event_price ?>;
         let appliedVoucher = null;
@@ -659,6 +872,21 @@ $event_price = 50.00; // Default price for demo
             document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
             document.getElementById('total-amount').textContent = '$' + finalPrice.toFixed(2);
             
+            // Update discount amount if voucher is applied
+            if (appliedVoucher && discountAmount > 0) {
+                // Recalculate discount based on new subtotal
+                if (appliedVoucher.discount_type === 'PERCENT') {
+                    discountAmount = subtotal * (appliedVoucher.percent_off / 100);
+                } else {
+                    discountAmount = Math.min(appliedVoucher.amount_off, subtotal);
+                }
+                
+                const newFinalPrice = subtotal - discountAmount;
+                document.getElementById('final-price').textContent = '$' + newFinalPrice.toFixed(2);
+                document.getElementById('discount-amount').textContent = '-$' + discountAmount.toFixed(2);
+                document.getElementById('total-amount').textContent = '$' + newFinalPrice.toFixed(2);
+            }
+            
             document.getElementById('price-breakdown').style.display = 'block';
         }
 
@@ -666,6 +894,56 @@ $event_price = 50.00; // Default price for demo
             console.log('selectVoucher called with code:', code, 'voucherId:', voucherId);
             document.getElementById('voucher-code').value = code;
             applyVoucher(code, voucherId);
+        }
+
+        function clearVoucher(event) {
+            // Prevent form submission and page navigation
+            if (event) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            
+            appliedVoucher = null;
+            discountAmount = 0;
+            
+            // Reset discount display
+            document.getElementById('discount-label').textContent = 'Discount:';
+            document.getElementById('discount-row').style.display = 'none';
+            
+            // Clear voucher input
+            document.getElementById('voucher-code').value = '';
+            
+            // Re-enable the apply button and input field
+            const applyButton = document.querySelector('.voucher-btn');
+            const voucherInput = document.getElementById('voucher-code');
+            
+            if (applyButton) {
+                applyButton.disabled = false;
+                applyButton.textContent = 'Apply';
+                applyButton.style.background = 'var(--primary-orange)';
+                console.log('Button state changed to Apply');
+            } else {
+                console.log('Apply button not found during clear');
+            }
+            
+            if (voucherInput) {
+                voucherInput.disabled = false;
+                console.log('Voucher input re-enabled');
+            } else {
+                console.log('Voucher input not found during clear');
+            }
+            
+            // Manually update prices to ensure they're correct
+            const tickets = parseInt(document.getElementById('tickets').value);
+            const subtotal = eventPrice * tickets;
+            const finalPrice = subtotal; // No discount
+            
+            document.getElementById('final-price').textContent = '$' + finalPrice.toFixed(2);
+            document.getElementById('subtotal').textContent = '$' + subtotal.toFixed(2);
+            document.getElementById('total-amount').textContent = '$' + finalPrice.toFixed(2);
+            
+            // Show message
+            showAlert('Voucher removed', 'success');
         }
 
         function toggleVouchers() {
@@ -687,8 +965,24 @@ $event_price = 50.00; // Default price for demo
             const voucherCode = specificCode || document.getElementById('voucher-code').value.trim();
             
             if (!voucherCode) {
-                alert('Please enter a voucher code');
+                showAlert('Please enter a voucher code', 'error');
                 return;
+            }
+
+            // Check if the same voucher is already applied
+            if (appliedVoucher && appliedVoucher.code === voucherCode) {
+                showAlert('This voucher is already applied', 'error');
+                return;
+            }
+
+            // Check if any voucher is already applied
+            if (appliedVoucher && appliedVoucher.code !== voucherCode) {
+                // Clear the current voucher first, then continue with new voucher
+                appliedVoucher = null;
+                discountAmount = 0;
+                document.getElementById('discount-label').textContent = 'Discount:';
+                document.getElementById('discount-row').style.display = 'none';
+                showAlert('Previous voucher removed, applying new voucher...', 'info');
             }
 
             // Simulate voucher validation (in real implementation, this would be an AJAX call)
@@ -739,25 +1033,75 @@ $event_price = 50.00; // Default price for demo
             document.getElementById('discount-amount').textContent = '-$' + discountAmount.toFixed(2);
             document.getElementById('total-amount').textContent = '$' + finalPrice.toFixed(2);
             
+            // Update discount label to show applied code
+            document.getElementById('discount-label').textContent = `Discount (${voucher.code}):`;
+            
             // Show discount row
             document.getElementById('discount-row').style.display = 'flex';
             document.getElementById('price-breakdown').style.display = 'block';
             
-            // Show success message
-            showAlert('Voucher applied successfully!', 'success');
+            // Show success message without scrolling
+            showAlert(`Voucher "${voucher.code}" applied successfully!`, 'success');
+            
+            // Disable the apply button and input field to prevent multiple applications
+            const applyButton = document.querySelector('.voucher-btn');
+            const voucherInput = document.getElementById('voucher-code');
+            
+            if (applyButton) {
+                applyButton.disabled = true;
+                applyButton.textContent = 'Applied';
+                applyButton.style.background = 'var(--gray-400)';
+                console.log('Button state changed to Applied');
+            } else {
+                console.log('Apply button not found');
+            }
+            
+            if (voucherInput) {
+                voucherInput.disabled = true;
+                console.log('Voucher input disabled');
+            } else {
+                console.log('Voucher input not found');
+            }
         }
 
         function showAlert(message, type) {
-            const alertDiv = document.createElement('div');
-            alertDiv.className = `alert alert-${type}`;
-            alertDiv.textContent = message;
+            // Remove any existing toasts first
+            const existingToasts = document.querySelectorAll('.toast');
+            existingToasts.forEach(toast => toast.remove());
             
-            const form = document.getElementById('booking-form');
-            form.insertBefore(alertDiv, form.firstChild);
+            const toastContainer = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = `toast toast-${type}`;
             
+            // Get appropriate icon for each type
+            let icon = '✓';
+            if (type === 'error') icon = '✕';
+            else if (type === 'info') icon = 'ℹ';
+            
+            toast.innerHTML = `
+                <div class="toast-icon">${icon}</div>
+                <div class="toast-message">${message}</div>
+                <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+            `;
+            
+            toastContainer.appendChild(toast);
+            
+            // Trigger animation
             setTimeout(() => {
-                alertDiv.remove();
-            }, 3000);
+                toast.classList.add('show');
+            }, 10);
+            
+            // Auto remove after 4 seconds
+            setTimeout(() => {
+                if (toast.parentElement) {
+                    toast.classList.remove('show');
+                    setTimeout(() => {
+                        if (toast.parentElement) {
+                            toast.remove();
+                        }
+                    }, 300);
+                }
+            }, 4000);
         }
 
         function proceedToPayment() {

@@ -59,28 +59,37 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
     <title>Payment - <?= htmlspecialchars($booking_data['eventTitle']) ?></title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Benton+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://js.stripe.com/v3/"></script>
     <style>
+        /* Cache busting - v2.0 */
         :root {
-            --eventbrite-orange: #ff8000;
-            --eventbrite-orange-light: #ff9524;
-            --eventbrite-orange-dark: #e6730d;
-            --gray-900: #1e293b;
-            --gray-800: #334155;
-            --gray-700: #475569;
-            --gray-600: #64748b;
-            --gray-500: #94a3b8;
-            --gray-400: #cbd5e1;
-            --gray-300: #e2e8f0;
-            --gray-200: #f1f5f9;
-            --gray-100: #f8fafc;
+            --primary-orange: #fc8019;
+            --primary-orange-dark: #e6730d;
+            --gray-900: #1a1a1a;
+            --gray-800: #2a2a2a;
+            --gray-700: #3a3a3a;
+            --gray-600: #6b7280;
+            --gray-500: #9ca3af;
+            --gray-400: #d1d5db;
+            --gray-300: #e5e7eb;
+            --gray-200: #f3f4f6;
+            --gray-100: #f9fafb;
             --white: #ffffff;
             --success-green: #10b981;
             --error-red: #ef4444;
+            --border-radius-sm: 8px;
+            --border-radius-md: 12px;
+            --border-radius-lg: 16px;
+            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         * {
@@ -90,235 +99,282 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
         }
 
         body {
-            font-family: 'Benton Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background-color: var(--gray-100);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
             color: var(--gray-800);
-            line-height: 1.5;
+            line-height: 1.6;
+            min-height: 100vh;
         }
 
         .container {
-            max-width: 800px;
+            max-width: 1200px;
             margin: 0 auto;
-            padding: 24px;
+            padding: 20px;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 40px;
         }
 
         .header h1 {
-            font-size: 32px;
-            font-weight: 700;
+            font-size: 42px;
+            font-weight: 800;
             color: var(--gray-900);
-            margin-bottom: 8px;
+            margin-bottom: 12px;
+            background: linear-gradient(135deg, var(--primary-orange), #ff6b35);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
 
         .header p {
             color: var(--gray-600);
             font-size: 16px;
+            font-weight: 500;
         }
 
         .payment-container {
             display: grid;
-            grid-template-columns: 1fr 400px;
-            gap: 32px;
+            grid-template-columns: 1fr 420px;
+            gap: 40px;
+            align-items: start;
         }
 
         .payment-form {
             background: var(--white);
-            border-radius: 16px;
-            padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            border-radius: var(--border-radius-lg);
+            padding: 40px;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--gray-200);
         }
 
         .form-section {
-            margin-bottom: 32px;
+            margin-bottom: 40px;
         }
 
         .form-section h3 {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 20px;
+            font-weight: 700;
             color: var(--gray-900);
-            margin-bottom: 16px;
-            padding-bottom: 8px;
-            border-bottom: 2px solid var(--eventbrite-orange);
+            margin-bottom: 24px;
+            padding-bottom: 12px;
+            border-bottom: 3px solid var(--primary-orange);
+            position: relative;
+        }
+
+        .form-section h3::after {
+            content: '';
+            position: absolute;
+            bottom: -3px;
+            left: 0;
+            width: 60px;
+            height: 3px;
+            background: linear-gradient(90deg, var(--primary-orange), #ff6b35);
+            border-radius: 2px;
         }
 
         .form-group {
-            margin-bottom: 20px;
+            margin-bottom: 24px;
         }
 
         .form-group label {
             display: block;
             font-weight: 600;
             color: var(--gray-700);
-            margin-bottom: 6px;
+            margin-bottom: 8px;
             font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .form-group input {
             width: 100%;
-            padding: 12px 16px;
+            padding: 16px 20px;
             border: 2px solid var(--gray-300);
-            border-radius: 8px;
+            border-radius: var(--border-radius-md);
             font-size: 16px;
             font-family: inherit;
-            transition: all 0.2s ease;
+            transition: all 0.3s ease;
+            background: var(--white);
         }
 
         .form-group input:focus {
             outline: none;
-            border-color: var(--eventbrite-orange);
-            box-shadow: 0 0 0 3px rgba(255, 128, 0, 0.1);
+            border-color: var(--primary-orange);
+            box-shadow: 0 0 0 4px rgba(252, 128, 25, 0.1);
+            transform: translateY(-1px);
         }
 
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 16px;
+        .form-group input::placeholder {
+            color: var(--gray-400);
         }
 
         .order-summary {
             background: var(--white);
-            border-radius: 16px;
+            border-radius: var(--border-radius-lg);
             padding: 32px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-            height: fit-content;
+            box-shadow: var(--shadow-lg);
+            border: 1px solid var(--gray-200);
+            position: sticky;
+            top: 20px;
         }
 
         .event-info {
             display: flex;
             align-items: center;
-            margin-bottom: 24px;
+            margin-bottom: 32px;
             padding-bottom: 24px;
-            border-bottom: 1px solid var(--gray-200);
+            border-bottom: 2px solid var(--gray-100);
         }
 
         .event-icon {
-            width: 64px;
-            height: 64px;
-            background: var(--eventbrite-orange);
-            border-radius: 12px;
+            width: 72px;
+            height: 72px;
+            background: linear-gradient(135deg, var(--primary-orange), #ff6b35);
+            border-radius: var(--border-radius-md);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 24px;
+            font-size: 28px;
             color: var(--white);
-            margin-right: 16px;
+            margin-right: 20px;
+            box-shadow: var(--shadow-md);
         }
 
         .event-details h4 {
-            font-size: 18px;
-            font-weight: 600;
+            font-size: 20px;
+            font-weight: 700;
             color: var(--gray-900);
-            margin-bottom: 4px;
+            margin-bottom: 6px;
         }
 
         .event-details p {
             font-size: 14px;
             color: var(--gray-600);
+            font-weight: 500;
         }
 
         .price-breakdown {
-            margin-bottom: 24px;
+            margin-bottom: 32px;
         }
 
         .price-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 8px;
-            font-size: 14px;
+            align-items: center;
+            margin-bottom: 12px;
+            padding: 8px 0;
+            font-size: 15px;
         }
 
         .price-row.total {
-            border-top: 1px solid var(--gray-300);
-            padding-top: 12px;
-            font-weight: 600;
-            font-size: 18px;
+            border-top: 2px solid var(--gray-200);
+            padding-top: 16px;
+            margin-top: 16px;
+            font-weight: 700;
+            font-size: 20px;
             color: var(--gray-900);
+            background: linear-gradient(135deg, var(--gray-50), var(--white));
+            padding: 16px;
+            border-radius: var(--border-radius-sm);
+            border: 1px solid var(--gray-200);
         }
 
         .discount {
             color: var(--success-green);
+            font-weight: 600;
         }
 
         .voucher-info {
-            background: var(--gray-50);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 16px;
-            font-size: 14px;
+            background: linear-gradient(135deg, var(--gray-50), var(--white));
+            border-radius: var(--border-radius-md);
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid var(--gray-200);
         }
 
         .voucher-info .label {
             font-weight: 600;
             color: var(--gray-700);
+            font-size: 13px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
         }
 
         .voucher-info .code {
-            font-family: monospace;
-            color: var(--eventbrite-orange);
+            font-family: 'Courier New', monospace;
+            color: var(--primary-orange);
+            font-weight: 600;
+            font-size: 14px;
+            margin-top: 4px;
         }
 
         .payment-btn {
             width: 100%;
-            padding: 16px 24px;
-            background: var(--eventbrite-orange);
+            padding: 24px 32px;
+            background: linear-gradient(135deg, var(--primary-orange), #ff6b35);
             color: var(--white);
             border: none;
-            border-radius: 8px;
-            font-size: 18px;
-            font-weight: 600;
+            border-radius: var(--border-radius-md);
+            font-size: 20px;
+            font-weight: 800;
             cursor: pointer;
-            transition: all 0.2s ease;
-            margin-top: 24px;
+            transition: all 0.3s ease;
+            margin-top: 32px;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            box-shadow: 0 8px 25px rgba(252, 128, 25, 0.3);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .payment-btn::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+
+        .payment-btn:hover::before {
+            left: 100%;
         }
 
         .payment-btn:hover {
-            background: var(--eventbrite-orange-dark);
-            transform: translateY(-1px);
+            transform: translateY(-3px);
+            box-shadow: 0 12px 35px rgba(252, 128, 25, 0.4);
+        }
+
+        .payment-btn:active {
+            transform: translateY(0);
         }
 
         .payment-btn:disabled {
             background: var(--gray-400);
             cursor: not-allowed;
             transform: none;
-        }
-
-        .alert {
-            padding: 12px 16px;
-            border-radius: 8px;
-            margin-bottom: 16px;
-            font-weight: 500;
-        }
-
-        .alert-error {
-            background: #fef2f2;
-            color: #991b1b;
-            border: 1px solid #fecaca;
-        }
-
-        .alert-success {
-            background: #f0fdf4;
-            color: #166534;
-            border: 1px solid #bbf7d0;
+            box-shadow: none;
         }
 
         .loading {
             display: none;
             text-align: center;
-            padding: 20px;
+            padding: 24px;
         }
 
         .spinner {
-            border: 3px solid var(--gray-300);
-            border-top: 3px solid var(--eventbrite-orange);
+            border: 4px solid var(--gray-200);
+            border-top: 4px solid var(--primary-orange);
             border-radius: 50%;
-            width: 30px;
-            height: 30px;
+            width: 40px;
+            height: 40px;
             animation: spin 1s linear infinite;
-            margin: 0 auto 10px;
+            margin: 0 auto 16px;
         }
 
         @keyframes spin {
@@ -326,18 +382,37 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
             100% { transform: rotate(360deg); }
         }
 
+        .loading p {
+            color: var(--gray-600);
+            font-weight: 500;
+        }
+
+        @media (max-width: 1024px) {
+            .payment-container {
+                grid-template-columns: 1fr;
+                gap: 32px;
+            }
+            
+            .order-summary {
+                position: static;
+            }
+        }
+
         @media (max-width: 768px) {
             .container {
                 padding: 16px;
             }
-
-            .payment-container {
-                grid-template-columns: 1fr;
-                gap: 24px;
+            
+            .payment-form {
+                padding: 24px;
             }
-
-            .form-row {
-                grid-template-columns: 1fr;
+            
+            .order-summary {
+                padding: 24px;
+            }
+            
+            .header h1 {
+                font-size: 28px;
             }
         }
     </style>
@@ -397,7 +472,7 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 <?php if ($booking_data['voucherCode']): ?>
                     <div class="voucher-info">
-                        <div class="label">Voucher Applied:</div>
+                        <div class="label">🎟️ Voucher Applied:</div>
                         <div class="code"><?= htmlspecialchars($booking_data['voucherCode']) ?></div>
                     </div>
                 <?php endif; ?>
@@ -409,7 +484,7 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                     </div>
                     <?php if ($booking_data['discount'] > 0): ?>
                         <div class="price-row discount">
-                            <span>Discount:</span>
+                            <span>Discount (<?= htmlspecialchars($booking_data['voucherCode']) ?>):</span>
                             <span>-$<?= number_format($booking_data['discount'], 2) ?></span>
                         </div>
                     <?php endif; ?>
@@ -524,7 +599,11 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                     const discountRow = document.querySelector('.price-row.discount');
                     if (discountRow) {
                         discountRow.style.display = 'flex';
+                        const discountLabel = discountRow.querySelector('span:first-child');
                         const discountAmount = discountRow.querySelector('span:last-child');
+                        if (discountLabel) {
+                            discountLabel.textContent = 'Discount (' + bookingData.voucherCode + '):';
+                        }
                         if (discountAmount) {
                             discountAmount.textContent = '-$' + bookingData.discount.toFixed(2);
                         }
@@ -540,6 +619,18 @@ $event = $stmt->fetch(PDO::FETCH_ASSOC);
                                 voucherCode.textContent = bookingData.voucherCode;
                             }
                         }
+                    }
+                } else {
+                    // Hide discount row if no discount
+                    const discountRow = document.querySelector('.price-row.discount');
+                    if (discountRow) {
+                        discountRow.style.display = 'none';
+                    }
+                    
+                    // Hide voucher info if no voucher
+                    const voucherInfo = document.querySelector('.voucher-info');
+                    if (voucherInfo) {
+                        voucherInfo.style.display = 'none';
                     }
                 }
             }
